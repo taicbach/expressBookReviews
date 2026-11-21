@@ -1,43 +1,129 @@
-const express = require('express');
-let books = require("./booksdb.js");
-let isValid = require("./auth_users.js").isValid;
-let users = require("./auth_users.js").users;
+const express = require("express");
+const axios = require("axios");
+
+const books = require("./booksdb.js");
+const { isValid, users } = require("./auth_users.js");
+
 const public_users = express.Router();
 
+// Task 6: Register a new user
+public_users.post("/register", (req, res) => {
+    const { username, password } = req.body;
 
-public_users.post("/register", (req,res) => {
-  //Write your code here
-  return res.status(300).json({message: "Yet to be implemented"});
+    if (!username || !password) {
+        return res.status(400).json({
+            message: "Username and password are required"
+        });
+    }
+
+    if (isValid(username)) {
+        return res.status(409).json({
+            message: "User already exists"
+        });
+    }
+
+    users.push({ username, password });
+
+    return res.status(201).json({
+        message: "User successfully registered"
+    });
 });
 
-// Get the book list available in the shop
-public_users.get('/',function (req, res) {
-  //Write your code here
-  return res.status(300).json({message: "Yet to be implemented"});
+// Task 1: Retrieve all books
+public_users.get("/", (req, res) => {
+    return res.status(200).json(books);
 });
 
-// Get book details based on ISBN
-public_users.get('/isbn/:isbn',function (req, res) {
-  //Write your code here
-  return res.status(300).json({message: "Yet to be implemented"});
- });
-  
-// Get book details based on author
-public_users.get('/author/:author',function (req, res) {
-  //Write your code here
-  return res.status(300).json({message: "Yet to be implemented"});
+// Task 2: Retrieve a book by ISBN
+public_users.get("/isbn/:isbn", (req, res) => {
+    const book = books[req.params.isbn];
+
+    if (!book) {
+        return res.status(404).json({
+            message: "Book not found"
+        });
+    }
+
+    return res.status(200).json(book);
 });
 
-// Get all books based on title
-public_users.get('/title/:title',function (req, res) {
-  //Write your code here
-  return res.status(300).json({message: "Yet to be implemented"});
+// Task 3: Retrieve books by author
+public_users.get("/author/:author", (req, res) => {
+    const author = req.params.author;
+
+    const results = Object.fromEntries(
+        Object.entries(books).filter(
+            ([isbn, book]) => book.author === author
+        )
+    );
+
+    return res.status(200).json(results);
 });
 
-//  Get book review
-public_users.get('/review/:isbn',function (req, res) {
-  //Write your code here
-  return res.status(300).json({message: "Yet to be implemented"});
+// Task 4: Retrieve books by title
+public_users.get("/title/:title", (req, res) => {
+    const title = req.params.title;
+
+    const results = Object.fromEntries(
+        Object.entries(books).filter(
+            ([isbn, book]) => book.title === title
+        )
+    );
+
+    return res.status(200).json(results);
 });
+
+// Task 5: Retrieve book reviews
+public_users.get("/review/:isbn", (req, res) => {
+    const book = books[req.params.isbn];
+
+    if (!book) {
+        return res.status(404).json({
+            message: "Book not found"
+        });
+    }
+
+    if (Object.keys(book.reviews).length === 0) {
+        return res.status(200).json({
+            message: "No reviews found for this book."
+        });
+    }
+
+    return res.status(200).json(book.reviews);
+});
+
+// Tasks 10-13: Axios requests using Async/Await
+
+const getAllBooksAsync = async () => {
+    const response = await axios.get(
+        "http://localhost:5000/"
+    );
+    return response.data;
+};
+
+const getBookByISBNAsync = async (isbn) => {
+    const response = await axios.get(
+        `http://localhost:5000/isbn/${isbn}`
+    );
+    return response.data;
+};
+
+const getBooksByAuthorAsync = async (author) => {
+    const response = await axios.get(
+        `http://localhost:5000/author/${encodeURIComponent(author)}`
+    );
+    return response.data;
+};
+
+const getBooksByTitleAsync = async (title) => {
+    const response = await axios.get(
+        `http://localhost:5000/title/${encodeURIComponent(title)}`
+    );
+    return response.data;
+};
 
 module.exports.general = public_users;
+module.exports.getAllBooksAsync = getAllBooksAsync;
+module.exports.getBookByISBNAsync = getBookByISBNAsync;
+module.exports.getBooksByAuthorAsync = getBooksByAuthorAsync;
+module.exports.getBooksByTitleAsync = getBooksByTitleAsync;
